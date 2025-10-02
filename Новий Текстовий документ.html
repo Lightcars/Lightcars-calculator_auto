@@ -1,0 +1,259 @@
+
+<!doctype html>
+<html lang="ук">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>LIGHTCARS — калькулятор витрат</title>
+<style>
+  :root{
+    --bg:#0b0d10; --card:#12151b; --panel:#171b23; --text:#f5f7fb; --muted:#aab3c2;
+    --line:rgba(255,255,255,.12); --brand:#e11d48; --cyan:#22d3ee;
+    --radius:16px; --shadow:0 12px 36px rgba(0,0,0,.38)
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--text);
+    font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial}
+
+  .shell{display:flex;gap:12px;justify-content:center;align-items:flex-start}
+  .wrap{max-width:1060px;margin:18px auto 64px;padding:16px}
+
+  .glass{background:linear-gradient(180deg,rgba(255,255,255,.06),rgba(255,255,255,.03));
+    border:1px solid var(--line); border-radius:var(--radius); box-shadow:var(--shadow)}
+
+  header.brand{display:flex;gap:16px;align-items:center;padding:16px}
+  .logo{width:105px;height:105px;border-radius:16px;overflow:hidden;border:1px solid var(--line);
+    background:#f2f2f2;display:grid;place-items:center}
+  .logo img{width:92%;height:92%;object-fit:contain}
+
+  .headline h1{margin:0 0 4px 0;letter-spacing:.3px}
+  .headline .sub{color:var(--muted)}
+
+  .side{position:sticky; top:16px; align-self:flex-start; width:300px; margin-right:6px}
+  .widget{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px;margin-top:10px}
+  .widget h4{margin:0 0 6px 0}
+
+  .section{margin-top:10px;overflow:hidden}
+  .section .head{display:flex;justify-content:space-between;align-items:center;padding:10px 16px;
+    background:linear-gradient(90deg,rgba(225,29,72,.18),rgba(34,211,238,.10))}
+  .section .head .rightnote{color:transparent}
+
+  table{width:100%;border-collapse:separate;border-spacing:0;background:var(--card)}
+  tbody td{padding:10px 14px;border-bottom:1px dashed var(--line);vertical-align:middle}
+  tbody tr:last-child td{border-bottom:none}
+  .subhead td{background:rgba(255,255,255,.04);font-weight:700;letter-spacing:.3px}
+  .label{display:flex;align-items:center;gap:10px}
+  .dot{width:10px;height:10px;border-radius:50%;background:var(--cyan);
+       box-shadow:0 0 0 4px rgba(34,211,238,.12)}
+  .right{text-align:right} .muted{color:var(--muted)}
+
+  .value{min-width:160px;display:inline-block;text-align:right;cursor:text;font-size:1.06rem}
+  .value:focus{outline:2px solid rgba(34,211,238,.4);border-radius:8px}
+  .input{display:none;width:180px;text-align:right;background:#0c0f15;border:1px solid var(--line);
+         color:var(--text);padding:9px 10px;border-radius:10px}
+
+  input[type=number]::-webkit-outer-spin-button,
+  input[type=number]::-webkit-inner-spin-button{ -webkit-appearance: none; margin:0 }
+  input[type=number]{ -moz-appearance:textfield }
+
+  .sep{
+    height:3px;
+    background:rgba(255,255,255,.18);
+    margin:10px 16px 12px;  /* ↓ з 14px на 12px */
+    border-radius:3px
+  }
+
+  .sumwrap{padding:6px 16px 8px}  /* ↓ з 10px на 8px */
+  .sumrow{position:relative;min-height:2.4rem}
+  .sumtitle{position:absolute;left:50%;transform:translateX(-50%);margin:0;font-weight:700}
+  .sumval{position:absolute;right:0;top:-4px;margin:0;font-size:1.9rem;letter-spacing:.3px}
+
+  .notes{padding:10px 16px 14px}
+  .notes ul{margin:8px 0 0 18px;padding:0;list-style:disc}
+  .notes li{color:var(--muted);margin:6px 0}
+
+  .sum-bubble td{padding:4px 14px 6px;border-bottom:1px dashed var(--line)}
+  .pill{display:inline-block; min-width:72px; padding:4px 8px;
+    font-size:0.9rem; text-align:center; font-weight:600;
+    background:rgba(255,255,255,.06); border:1px solid var(--line); border-radius:999px}
+
+  @media (max-width:1200px){
+    .shell{flex-direction:column;align-items:center}
+    .side{width:100%}
+  }
+  @media print{ .side{display:none} }
+</style>
+</head>
+<body>
+
+<div class="shell">
+  <div id="capture" class="wrap">
+    <header class="brand glass">
+      <div class="logo" title="LIGHTCARS">
+        <img src="logo_lightcars.svg" alt="LIGHTCARS">
+      </div>
+      <div class="headline">
+        <h1>LIGHTCARS — калькулятор витрат</h1>
+        <div class="sub">Клікни "Суму" у стовпці — введи значення. Підсумок порахується внизу.</div>
+      </div>
+    </header>
+
+    <section class="section glass">
+      <div class="head">
+        <strong>Статті витрат</strong>
+        <span class="rightnote">.</span>
+      </div>
+
+      <table><tbody id="rows"></tbody></table>
+
+      <div class="sep"></div>
+
+      <div class="sumwrap">
+        <div class="sumrow">
+          <p class="sumtitle">Вартість Автомобіля БЕЗ РЕМОНТУ</p>
+          <p class="sumval" id="sumUsd">0</p>
+        </div>
+      </div>
+
+      <div class="sep"></div>
+
+      <div class="notes">
+        <ul>
+          <li>Всі ціни вказані в доларах США.</li>
+          <li>Ціна вартості розмитнення розрахована по калькулятору і є орієнтовною. Більш точна вартість буде розрахована на момент митного оформлення авто.</li>
+          <li>Вартість ремонту розрахована згідно видимих на фотографіях пошкоджень.</li>
+        </ul>
+      </div>
+    </section>
+  </div>
+
+  <aside class="side">
+    <div class="widget">
+      <h4>Лот + Аукціон + 1600</h4>
+      <div class="muted">Авто-перерахунок у реальному часі</div>
+      <div style="font-size:1.4rem;margin-top:6px"><b id="quickSum">0</b> $</div>
+    </div>
+  </aside>
+</div>
+
+<script>
+  const LINES = [
+    ['group', 'Базові параметри'],
+    ['user','lot','Вартість лоту',0],
+    ['user','auction','Аукціонний збір',0],
+    ['user','klaipeda','Доставка в Клайпеду',0],
+    ['group', 'Автоматично розраховується'],
+    ['auto','insurance','Страхівка', s => (num(s.lot) + num(s.auction)) * 0.01 ],
+    ['user','service','Послуги компанії',500],
+    ['auto','swift','SWIFT переказ в США', s => (num(s.lot)+num(s.auction)+effectiveKlaipeda(s))*0.035 ],
+    ['group', 'Оформлення та сервіс'],
+    ['user','expedition','Експедиція (Завантаження, документи на експорт, вивантаження)',490],
+    ['user','lviv','Доставка до Львова',750],
+    ['user','broker','Брокерські послуги',200],
+    ['user','customs','Мито',0],
+  ];
+
+  const tbody=document.getElementById('rows');
+  const state={};
+  const roundUp=v=>Math.ceil(num(v));
+  const fmt=v=>String(roundUp(v));
+  function num(v){v=+((v+"").replace(",", "."));return isNaN(v)?0:v;}
+  function effectiveKlaipeda(s){const raw=num(s.klaipeda_raw||0);return raw===0?0:raw+700;}
+
+  function saved(key, def){
+    const resetTo={lot:0,auction:0,expedition:490,klaipeda_raw:0};
+    if(key in resetTo){localStorage.removeItem('lc_'+key);return resetTo[key];}
+    const s=localStorage.getItem('lc_'+key);
+    return s===null?def:(s===''?0:+s);
+  }
+  const store=(key,v)=>localStorage.setItem('lc_'+key,String(v));
+
+  let currentGroup=0,groupCount=0;
+  function appendGroupSumRow(groupIdx){
+    const tr=document.createElement('tr');
+    tr.className='sum-bubble';
+    tr.innerHTML=`<td></td><td class="right"><span class="pill" id="g${groupIdx}">0</span></td>`;
+    tbody.appendChild(tr);
+  }
+
+  LINES.forEach(([type,key,label,val],idx)=>{
+    if(type==='group'){
+      if(currentGroup>0) appendGroupSumRow(currentGroup);
+      groupCount++;currentGroup=groupCount;
+      const tr=document.createElement('tr');tr.className='subhead';
+      tr.innerHTML=`<td colspan="2">${label||''}</td>`;tbody.appendChild(tr);return;
+    }
+    if(type==='user'){
+      if(key==='klaipeda'){state.klaipeda_raw=saved('klaipeda_raw',0);}
+      else{state[key]=saved(key,val);}
+    }
+    const tr=document.createElement('tr');tr.dataset.key=key;tr.dataset.type=type;
+    let initialView='';
+    if(type==='user'){if(key==='klaipeda')initialView=fmt(effectiveKlaipeda(state));else initialView=fmt(state[key]);}
+    tr.innerHTML=`
+      <td><div class="label"><span class="dot"></span><span>${label||''}</span></div></td>
+      <td class="right">
+        ${type==='auto'
+          ? `<span class="value" data-auto id="view_${key}"></span>`
+          : `<span class="value" tabindex="0" data-view>${initialView}</span>
+             <input class="input" data-edit type="number" inputmode="decimal" step="0.01" min="0"
+               value="${key==='klaipeda'?state.klaipeda_raw:state[key]}">`}
+      </td>`;
+    tbody.appendChild(tr);
+    if(idx===LINES.length-1&&currentGroup>0)appendGroupSumRow(currentGroup);
+  });
+
+  function showEditor(tr){
+    const key=tr.dataset.key;
+    const edit=tr.querySelector('[data-edit]');const view=tr.querySelector('[data-view]');
+    if(!edit)return;
+    if(key==='klaipeda'){edit.value=state.klaipeda_raw||0;}
+    edit.style.display='inline-block';view.style.display='none';
+    requestAnimationFrame(()=>{const current=num(edit.value);edit.focus();
+      if(current===0){edit.value='';}else{const len=String(edit.value).length;edit.setSelectionRange(len,len);}});
+  }
+  function showValue(tr,val){
+    const key=tr.dataset.key;
+    const edit=tr.querySelector('[data-edit]');const view=tr.querySelector('[data-view]');
+    if(!edit)return;edit.style.display='none';view.style.display='inline-block';
+    if(key==='klaipeda'){view.textContent=fmt(effectiveKlaipeda(state));}
+    else{view.textContent=fmt(val);}
+  }
+
+  tbody.addEventListener('click',e=>{const tr=e.target.closest('tr');if(!tr)return;
+    if(tr.dataset.type!=='user')return;if(e.target.hasAttribute('data-view'))showEditor(tr);});
+  tbody.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.matches('[data-edit]'))e.target.blur();});
+  tbody.addEventListener('focusin',e=>{const tr=e.target.closest('tr');
+    if(tr&&e.target.hasAttribute('data-view')&&tr.dataset.type==='user')showEditor(tr);});
+  tbody.addEventListener('blur',e=>{if(!e.target.matches('[data-edit]'))return;
+    const tr=e.target.closest('tr');const key=tr.dataset.key;const raw=e.target.value;
+    const v=num(raw);if(key==='klaipeda'){state.klaipeda_raw=v;store('klaipeda_raw',v);}
+    else{state[key]=v;store(key,v);}showValue(tr,v);recalc();},true);
+
+  const sumUsd=document.getElementById('sumUsd');
+  const quickSum=document.getElementById('quickSum');
+
+  function recalc(){
+    state.swift=LINES.find(r=>r[1]==='swift')[3](state);
+    const swv=document.getElementById('view_swift');if(swv)swv.textContent=fmt(state.swift);
+    state.insurance=LINES.find(r=>r[1]==='insurance')[3](state);
+    const inv=document.getElementById('view_insurance');if(inv)inv.textContent=fmt(state.insurance);
+    const klaRow=tbody.querySelector('tr[data-key="klaipeda"]');
+    if(klaRow){klaRow.querySelector('[data-view]').textContent=fmt(effectiveKlaipeda(state));}
+    let total=0;
+    LINES.forEach(([type,key])=>{if(type==='group')return;
+      if(key==='klaipeda'){total+=roundUp(effectiveKlaipeda(state));}else total+=roundUp(state[key]);});
+    sumUsd.textContent=fmt(total);
+    const g1=roundUp(state.lot||0)+roundUp(state.auction||0)+roundUp(effectiveKlaipeda(state));
+    const g2=roundUp(state.insurance||0)+roundUp(state.service||0)+roundUp(state.swift||0);
+    const g3=roundUp(state.expedition||0)+roundUp(state.lviv||0)+roundUp(state.broker||0)+roundUp(state.customs||0);
+    const g1El=document.getElementById('g1');const g2El=document.getElementById('g2');const g3El=document.getElementById('g3');
+    if(g1El)g1El.textContent=fmt(g1);if(g2El)g2El.textContent=fmt(g2);if(g3El)g3El.textContent=fmt(g3);
+    quickSum.textContent=fmt(num(state.lot)+num(state.auction)+1600);
+  }
+
+  recalc();
+</script>
+</body>
+</html>
+
